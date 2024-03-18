@@ -24,3 +24,34 @@ public struct Chip {
         sleep(UInt32(soderingTime))
     }
 }
+
+// MARK: - Data storage
+
+public final class SafeQueue<T> {
+    private let mutex = NSLock()
+
+    private var elements: [T] = []
+
+    public var count: Int {
+        mutex.lock()
+        let result = elements.count
+        mutex.unlock()
+        return result
+    }
+
+    func enqueue(_ value: T) {
+        mutex.lock()
+        elements.append(value)
+        mutex.unlock()
+    }
+
+    func dequeue() -> T? {
+        mutex.lock()
+        guard !elements.isEmpty else {
+            return nil
+        }
+        let result = elements.removeFirst()
+        mutex.unlock()
+        return result
+    }
+}
