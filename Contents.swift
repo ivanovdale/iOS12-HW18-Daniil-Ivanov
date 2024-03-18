@@ -29,7 +29,6 @@ public struct Chip {
 
 public final class SafeQueue<T> {
     private let mutex = NSLock()
-
     private var elements: [T] = []
 
     public var count: Int {
@@ -39,13 +38,13 @@ public final class SafeQueue<T> {
         return result
     }
 
-    func enqueue(_ value: T) {
+    public func enqueue(_ value: T) {
         mutex.lock()
         elements.append(value)
         mutex.unlock()
     }
 
-    func dequeue() -> T? {
+    public func dequeue() -> T? {
         mutex.lock()
         guard !elements.isEmpty else {
             return nil
@@ -59,17 +58,15 @@ public final class SafeQueue<T> {
 // MARK: - Data handling threads
 
 final class GenerationThread: Thread {
-    private var timer: Timer?
-
-    private var currentTime = 0
-
-    private let generationTime = 2
-
-    private let endTime = 20
+    private enum Constants {
+        static let generationTime = 2
+        static let endTime = 20
+    }
 
     private let semaphore: DispatchSemaphore
-
     private let chipQueueStorage: SafeQueue<Chip>
+    private var timer: Timer?
+    private var currentTime = 0
 
     init(semaphore: DispatchSemaphore, chipQueueStorage: SafeQueue<Chip>) {
         self.semaphore = semaphore
@@ -84,7 +81,10 @@ final class GenerationThread: Thread {
     }
 
     private func initializeTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: Double(generationTime), repeats: true) { _ in
+        timer = Timer.scheduledTimer(
+            withTimeInterval: Double(Constants.generationTime),
+            repeats: true
+        ) { _ in
             defer {
                 self.semaphore.signal()
             }
@@ -93,25 +93,22 @@ final class GenerationThread: Thread {
             self.chipQueueStorage.enqueue(chip)
             print("Chip \(self.currentTime / 2) was made. Time \(self.currentTime) seconds")
 
-            if self.currentTime == self.endTime {
+            if self.currentTime == Constants.endTime {
                 self.timer?.invalidate()
                 self.timer = nil
                 print("Generation finished ✅")
                 return
             }
-            self.currentTime += self.generationTime
+            self.currentTime += Constants.generationTime
         }
     }
 }
 
 final class WorkThread: Thread {
     private let semaphore: DispatchSemaphore
-
     private let chipQueueStorage: SafeQueue<Chip>
-
-    private var chipCount = 0
-
     private let generationThread: GenerationThread
+    private var chipCount = 0
 
     init(
         semaphore: DispatchSemaphore,
