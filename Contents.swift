@@ -55,3 +55,50 @@ public final class SafeQueue<T> {
         return result
     }
 }
+// MARK: - Data handling threads
+
+final class GenerationThread: Thread {
+    private var timer: Timer?
+
+    private var currentTime = 0
+
+    private let generationTime = 2
+
+    private let endTime = 20
+
+    private let semaphore: DispatchSemaphore
+
+    private let chipQueueStorage: SafeQueue<Chip>
+
+    init(semaphore: DispatchSemaphore, chipQueueStorage: SafeQueue<Chip>) {
+        self.semaphore = semaphore
+        self.chipQueueStorage = chipQueueStorage
+    }
+
+    override func main() {
+        initializeTimer()
+        guard let timer else { return }
+        RunLoop.current.add(timer, forMode: .common)
+        RunLoop.current.run()
+    }
+
+    private func initializeTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: Double(generationTime), repeats: true) { _ in
+            defer {
+                self.semaphore.signal()
+            }
+
+            let chip = Chip.make()
+            self.chipQueueStorage.enqueue(chip)
+            print("Chip \(self.currentTime / 2) was made. Time \(self.currentTime) seconds")
+
+            if self.currentTime == self.endTime {
+                self.timer?.invalidate()
+                self.timer = nil
+                print("Generation finished ✅")
+                return
+            }
+            self.currentTime += self.generationTime
+        }
+    }
+}
