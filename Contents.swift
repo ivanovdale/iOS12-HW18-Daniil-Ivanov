@@ -136,3 +136,17 @@ final class WorkThread: Thread {
     }
 }
 
+// MARK: - Use case
+
+let chipStorage = SafeQueue<Chip>()
+
+let semaphore = DispatchSemaphore(value: 0)
+let generationThread = GenerationThread(semaphore: semaphore, chipQueueStorage: chipStorage)
+let workThread = WorkThread(
+    semaphore: semaphore,
+    chipQueueStorage: chipStorage,
+    generationThread: generationThread
+)
+
+generationThread.start()
+workThread.start()
