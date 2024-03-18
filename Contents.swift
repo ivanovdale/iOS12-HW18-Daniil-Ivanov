@@ -55,6 +55,7 @@ public final class SafeQueue<T> {
         return result
     }
 }
+
 // MARK: - Data handling threads
 
 final class GenerationThread: Thread {
@@ -102,3 +103,36 @@ final class GenerationThread: Thread {
         }
     }
 }
+
+final class WorkThread: Thread {
+    private let semaphore: DispatchSemaphore
+
+    private let chipQueueStorage: SafeQueue<Chip>
+
+    private var chipCount = 0
+
+    private let generationThread: GenerationThread
+
+    init(
+        semaphore: DispatchSemaphore,
+        chipQueueStorage: SafeQueue<Chip>,
+        generationThread: GenerationThread
+    ) {
+        self.semaphore = semaphore
+        self.chipQueueStorage = chipQueueStorage
+        self.generationThread = generationThread
+    }
+
+    override func main() {
+        while chipQueueStorage.count != 0 || !generationThread.isFinished {
+            semaphore.wait()
+            guard let chip = chipQueueStorage.dequeue() else { continue }
+            chip.sodering()
+            print("Chip \(chipCount) was soldered")
+            chipCount += 1
+        }
+
+        print("Soldering finished ✅")
+    }
+}
+
