@@ -64,13 +64,11 @@ final class GenerationThread: Thread {
         static let endTime = 20
     }
 
-    private let semaphore: DispatchSemaphore
     private let chipQueueStorage: SafeQueue<Chip>
     private var timer: Timer?
     private var currentTime = 0
 
-    init(semaphore: DispatchSemaphore, chipQueueStorage: SafeQueue<Chip>) {
-        self.semaphore = semaphore
+    init(chipQueueStorage: SafeQueue<Chip>) {
         self.chipQueueStorage = chipQueueStorage
     }
 
@@ -86,10 +84,6 @@ final class GenerationThread: Thread {
             withTimeInterval: Double(Constants.generationTime),
             repeats: true
         ) { _ in
-            defer {
-                self.semaphore.signal()
-            }
-
             let chip = Chip.make()
             self.chipQueueStorage.enqueue(chip)
             print("Chip \(self.currentTime / 2) was made. Time \(self.currentTime) seconds")
@@ -106,22 +100,17 @@ final class GenerationThread: Thread {
 }
 
 final class WorkThread: Thread {
-    private let semaphore: DispatchSemaphore
     private let chipQueueStorage: SafeQueue<Chip>
     private let generationThread: GenerationThread
     private var chipCount = 0
 
-    init(semaphore: DispatchSemaphore,
-         chipQueueStorage: SafeQueue<Chip>,
-         generationThread: GenerationThread) {
-        self.semaphore = semaphore
+    init(chipQueueStorage: SafeQueue<Chip>, generationThread: GenerationThread) {
         self.chipQueueStorage = chipQueueStorage
         self.generationThread = generationThread
     }
 
     override func main() {
         while chipQueueStorage.count != 0 || !generationThread.isFinished {
-            semaphore.wait()
             guard let chip = chipQueueStorage.dequeue() else { continue }
             chip.sodering()
             print("Chip \(chipCount) was soldered")
@@ -136,12 +125,8 @@ final class WorkThread: Thread {
 
 let chipStorage = SafeQueue<Chip>()
 
-let semaphore = DispatchSemaphore(value: 0)
-let generationThread = GenerationThread(semaphore: semaphore, 
-                                        chipQueueStorage: chipStorage)
-let workThread = WorkThread(semaphore: semaphore,
-                            chipQueueStorage: chipStorage,
-                            generationThread: generationThread)
+let generationThread = GenerationThread(chipQueueStorage: chipStorage)
+let workThread = WorkThread(chipQueueStorage: chipStorage, generationThread: generationThread)
 
 generationThread.start()
 workThread.start()
