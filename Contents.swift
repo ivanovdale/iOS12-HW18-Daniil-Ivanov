@@ -28,29 +28,30 @@ public struct Chip {
 // MARK: - Data storage
 
 public final class SafeQueue<T> {
-    private let mutex = NSLock()
+    private let condition = NSCondition()
     private var elements: [T] = []
 
     public var count: Int {
-        mutex.lock()
+        condition.lock()
         let result = elements.count
-        mutex.unlock()
+        condition.unlock()
         return result
     }
 
     public func enqueue(_ value: T) {
-        mutex.lock()
+        condition.lock()
         elements.append(value)
-        mutex.unlock()
+        condition.unlock()
     }
 
     public func dequeue() -> T? {
-        mutex.lock()
+        condition.lock()
         guard !elements.isEmpty else {
+            condition.unlock()
             return nil
         }
         let result = elements.removeFirst()
-        mutex.unlock()
+        condition.unlock()
         return result
     }
 }
