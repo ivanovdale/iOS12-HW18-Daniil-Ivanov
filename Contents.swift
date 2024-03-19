@@ -110,11 +110,9 @@ final class WorkThread: Thread {
     private let generationThread: GenerationThread
     private var chipCount = 0
 
-    init(
-        semaphore: DispatchSemaphore,
-        chipQueueStorage: SafeQueue<Chip>,
-        generationThread: GenerationThread
-    ) {
+    init(semaphore: DispatchSemaphore,
+         chipQueueStorage: SafeQueue<Chip>,
+         generationThread: GenerationThread) {
         self.semaphore = semaphore
         self.chipQueueStorage = chipQueueStorage
         self.generationThread = generationThread
@@ -138,12 +136,11 @@ final class WorkThread: Thread {
 let chipStorage = SafeQueue<Chip>()
 
 let semaphore = DispatchSemaphore(value: 0)
-let generationThread = GenerationThread(semaphore: semaphore, chipQueueStorage: chipStorage)
-let workThread = WorkThread(
-    semaphore: semaphore,
-    chipQueueStorage: chipStorage,
-    generationThread: generationThread
-)
+let generationThread = GenerationThread(semaphore: semaphore, 
+                                        chipQueueStorage: chipStorage)
+let workThread = WorkThread(semaphore: semaphore,
+                            chipQueueStorage: chipStorage,
+                            generationThread: generationThread)
 
 generationThread.start()
 workThread.start()
